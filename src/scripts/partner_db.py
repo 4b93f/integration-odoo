@@ -1,16 +1,17 @@
 import asyncio
+import sys
+from sqlmodel import SQLModel
 from src.database import engine
 from src.models.partner import Partner
-import sys
 
 
 async def create_tables():
     async with engine.begin() as conn:
-        await conn.run_sync(Partner.metadata.create_all)
+        await conn.run_sync(SQLModel.metadata.create_all, checkfirst=True)
 
 async def drop_tables():
     async with engine.begin() as conn:
-        await conn.run_sync(Partner.metadata.drop_all)
+        await conn.run_sync(Partner.__table__.drop, checkfirst=True)
 
 if __name__ == "__main__":
     choice = input("Do you want to create (c) or drop (d) tables? ")

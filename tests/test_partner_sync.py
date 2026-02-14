@@ -10,7 +10,7 @@ class TestPartnerSync:
     
     @patch('src.partner_sync.OdooClient')
     @patch('src.partner_sync.upsert_partners')
-    @patch('src.partner_sync.delete_removed_partners')
+    @patch('src.partner_sync.delete_removed_partners') # DO NOT REMOVE THIS, OR DISASTER
     async def test_sync_partners_maps_fields_correctly(self, mock_delete, mock_upsert, mock_client_class):
         mock_client = MagicMock()
         mock_client.get_partners.return_value = [
@@ -61,3 +61,4 @@ class TestPartnerSync:
         records = mock_upsert.call_args[0][0]
         assert records[0]['email'] is None
         assert records[0]['phone'] is None
+        assert records[0]['function'] is None
