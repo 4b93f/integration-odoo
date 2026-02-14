@@ -2,6 +2,7 @@
 sqlalchemy[asyncio]==2.0.36
 asyncpg==0.30.0
 psycopg2-binary==2.9.10
+sqlmodel==0.0.22
 
 # Configuration
 pydantic==2.10.3
@@ -9,3 +10,13 @@ pydantic-settings==2.7.0
 
 # Utilities
 python-dotenv==1.0.1
+
+# API
+fastapi==0.115.12
+uvicorn[standard]==0.34.0
+
+# Testing
+pytest==8.3.4
+pytest-asyncio==0.24.0
+pytest-mock==3.14.0
+aiosqlite==0.20.0

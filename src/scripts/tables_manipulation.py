@@ -1,16 +1,16 @@
 import asyncio
 from src.database import engine
-from src.models.contact import Contact
+from src.models.partner import Partner
 import sys
 
 
 async def create_tables():
     async with engine.begin() as conn:
-        await conn.run_sync(Contact.metadata.create_all)
+        await conn.run_sync(Partner.metadata.create_all)
 
 async def drop_tables():
     async with engine.begin() as conn:
-        await conn.run_sync(Contact.metadata.drop_all)
+        await conn.run_sync(Partner.metadata.drop_all)
 
 if __name__ == "__main__":
     choice = input("Do you want to create (c) or drop (d) tables? ")

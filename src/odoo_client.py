@@ -78,7 +78,8 @@ class OdooClient:
             raise RuntimeError(f'API call failed: {e}')
     
     def get_partners(self, fields=None, domain=None):
-        domain = []
+        if domain is None:
+            domain = [('active', '=', True)]
         params = {}
             
         try:
@@ -86,7 +87,7 @@ class OdooClient:
                 self.db, self.uid, self.password,
                 'res.partner', 'search_read', [domain], params
             )
-            logger.debug(f'Retrieved {len(result)} partners')
+            logger.debug(f'Retrieved {len(result)} active partners')
             return result
         except Exception as e:
             logger.error(f'get_partners failed: {e}')

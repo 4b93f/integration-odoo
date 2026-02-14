@@ -3,12 +3,12 @@ from datetime import datetime
 from sqlalchemy import delete
 from sqlalchemy.dialects.postgresql import insert
 from src.odoo_client import OdooClient
-from src.models.contact import FIELD_MAP, Contact
+from src.models.partner import FIELD_MAP, Partner
 from src.database import engine
 
 
 
-async def sync_contacts():
+async def sync_partners():
     client = OdooClient()
 
     client.connect()
@@ -30,13 +30,13 @@ async def sync_contacts():
             print(f"  - {r}: {record[r]}")
         print(" --- ")
     
-    await upsert_contacts(records)
-    await delete_removed_contacts(odoo_ids)
+    await upsert_partners(records)
+    await delete_removed_partners(odoo_ids)
 
 
-async def upsert_contacts(records):
+async def upsert_partners(records):
     async with engine.begin() as conn:
-        stmt = insert(Contact).values(records)
+        stmt = insert(Partner).values(records)
 
         update_dict = {
             c.name: c for c in stmt.excluded
@@ -48,10 +48,10 @@ async def upsert_contacts(records):
             index_elements=["odoo_id"],
             set_=update_dict,
             where=(
-                (Contact.name != stmt.excluded.name) |
-                (Contact.email != stmt.excluded.email) |
-                (Contact.phone != stmt.excluded.phone) |
-                (Contact.function != stmt.excluded.function)
+                (Partner.name != stmt.excluded.name) |
+                (Partner.email != stmt.excluded.email) |
+                (Partner.phone != stmt.excluded.phone) |
+                (Partner.function != stmt.excluded.function)
             )
         )
         result = await conn.execute(stmt)
@@ -59,12 +59,12 @@ async def upsert_contacts(records):
         print(f"\n✅ Sync complete: {result.rowcount} records inserted/updated")
         return result.rowcount
 
-async def delete_removed_contacts(odoo_ids):
+async def delete_removed_partners(odoo_ids):
     async with engine.begin() as conn:
-        stmt = delete(Contact).where(~Contact.odoo_id.in_(odoo_ids))
+        stmt = delete(Partner).where(~Partner.odoo_id.in_(odoo_ids))
         result = await conn.execute(stmt)
-        print(f"\n🗑️  Deleted {result.rowcount} contacts removed from Odoo")
+        print(f"\n🗑️  Deleted {result.rowcount} partners removed from Odoo")
         return result.rowcount
 
 if __name__ == "__main__":
-    asyncio.run(sync_contacts())
+    asyncio.run(sync_partners())
