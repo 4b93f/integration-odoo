@@ -6,12 +6,12 @@ from sqlalchemy import delete
 from sqlalchemy.dialects.postgresql import insert
 from src.odoo_client import OdooClient
 from src.models.partner import FIELD_MAP, Partner
-from src.database import engine
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 logger = logging.getLogger(__name__)
 
 
-async def sync_partners():
+async def sync_partners(session: AsyncSession):
     """Main function to sync partners from Odoo to local database."""
     logger.info("Starting partner synchronization...")
     
@@ -44,48 +44,48 @@ async def sync_partners():
         odoo_ids.append(partner["id"])
 
     if records:
-        updated_count = await upsert_partners(records)
+        updated_count = await upsert_partners(records, session)
         logger.info(f"Upserted {updated_count} partners.")
     
-    deleted_count = await delete_removed_partners(odoo_ids)
+    deleted_count = await delete_removed_partners(odoo_ids, session)
     if deleted_count:
         logger.info(f"Deleted {deleted_count} partners removed from Odoo.")
     
     logger.info("Partner synchronization complete.")
 
 
-async def upsert_partners(records: List[Dict[str, Any]]) -> int:
+async def upsert_partners(records: List[Dict[str, Any]], session: AsyncSession) -> int:
     """Insert or update partner records in the database."""
-    async with engine.begin() as conn:
-        stmt = insert(Partner).values(records)
-
-        # Define fields to update on conflict
-        update_dict = {
-            c.name: c for c in stmt.excluded
-            if c.name not in ("id", "odoo_id", "synced_at")
-        }
-        update_dict["synced_at"] = stmt.excluded.synced_at
-
-        stmt = stmt.on_conflict_do_update(
-            index_elements=["odoo_id"],
-            set_=update_dict,
-            where=(
-                (Partner.name != stmt.excluded.name) |
-                (Partner.email != stmt.excluded.email) |
-                (Partner.phone != stmt.excluded.phone) |
-                (Partner.function != stmt.excluded.function) |
-                (Partner.active != stmt.excluded.active)
+    async with session.begin():
+        total = 0
+        for record in records:
+            stmt = insert(Partner).values(record)
+            update_dict = {
+                c.name: c for c in stmt.excluded
+                if c.name not in ("id", "odoo_id", "synced_at")
+            }
+            update_dict["synced_at"] = stmt.excluded.synced_at
+            stmt = stmt.on_conflict_do_update(
+                index_elements=["odoo_id"],
+                set_=update_dict,
+                where=(
+                    (Partner.name != stmt.excluded.name) |
+                    (Partner.email != stmt.excluded.email) |
+                    (Partner.phone != stmt.excluded.phone) |
+                    (Partner.function != stmt.excluded.function) |
+                    (Partner.active != stmt.excluded.active)
+                )
             )
-        )
-        result = await conn.execute(stmt)
-        return result.rowcount
+            result = await session.execute(stmt)
+            total += result.rowcount or 0
+        return total
 
 
-async def delete_removed_partners(odoo_ids: List[int]) -> int:
+async def delete_removed_partners(odoo_ids: List[int], session: AsyncSession) -> int:
     """Delete partners from local database that are no longer in Odoo."""
-    async with engine.begin() as conn:
+    async with session.begin():
         stmt = delete(Partner).where(Partner.odoo_id.notin_(odoo_ids))
-        result = await conn.execute(stmt)
+        result = await session.execute(stmt)
         return result.rowcount
 
 

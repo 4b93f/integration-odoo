@@ -2,14 +2,14 @@ import asyncio
 import logging
 import src.odoo_client as Odoo_client
 from src.models.invoices import FIELD_MAP, Invoice
-from src.database import engine
+from sqlmodel.ext.asyncio.session import AsyncSession
 from datetime import datetime
 from sqlalchemy.dialects.postgresql import insert
 
 
 logger = logging.getLogger(__name__)
 
-async def sync_invoices():
+async def sync_invoices(session: AsyncSession):
     client = Odoo_client.OdooClient()
     client.authenticate()
     
@@ -39,25 +39,26 @@ async def sync_invoices():
         record["synced_at"] = datetime.now()
         records.append(record)
     
-    await upsert_invoices(records)
+    await upsert_invoices(records, session)
     
-async def upsert_invoices(records: list[dict]) -> int:
+async def upsert_invoices(records: list[dict], session: AsyncSession) -> int:
     """Insert or update invoices in the database."""
-    async with engine.begin() as conn:
-        stmt = insert(Invoice).values(records)
-
-        update_dict = {
-            c.name: c for c in stmt.excluded
-            if c.name not in ("id", "odoo_id", "synced_at")
-        }
-        update_dict["synced_at"] = stmt.excluded.synced_at
-
-        stmt = stmt.on_conflict_do_update(
-            index_elements=["odoo_id"],
-            set_=update_dict
-        )
-        result = await conn.execute(stmt)
-        return result.rowcount
+    async with session.begin():
+        total = 0
+        for record in records:
+            stmt = insert(Invoice).values(record)
+            update_dict = {
+                c.name: c for c in stmt.excluded
+                if c.name not in ("id", "odoo_id", "synced_at")
+            }
+            update_dict["synced_at"] = stmt.excluded.synced_at
+            stmt = stmt.on_conflict_do_update(
+                index_elements=["odoo_id"],
+                set_=update_dict
+            )
+            result = await session.execute(stmt)
+            total += result.rowcount or 0
+        return total
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
