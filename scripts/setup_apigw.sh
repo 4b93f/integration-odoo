@@ -75,22 +75,6 @@ aws apigateway put-integration \
   --integration-http-method POST \
   --uri "arn:aws:apigateway:${AWS_REGION}:lambda:path/2015-03-31/functions/${FUNC_ARN}/invocations"
 
-# Also handle the root path "/" so /prod/ and /prod/health work
-aws apigateway put-method \
-  --rest-api-id "$REST_API_ID" \
-  --resource-id "$ROOT_ID" \
-  --http-method ANY \
-  --authorization-type "NONE" \
-  --api-key-required
-
-aws apigateway put-integration \
-  --rest-api-id "$REST_API_ID" \
-  --resource-id "$ROOT_ID" \
-  --http-method ANY \
-  --type AWS_PROXY \
-  --integration-http-method POST \
-  --uri "arn:aws:apigateway:${AWS_REGION}:lambda:path/2015-03-31/functions/${FUNC_ARN}/invocations"
-
 # Allow API Gateway to invoke the Lambda
 aws lambda add-permission \
   --function-name "$FUNCTION_NAME" \
@@ -98,11 +82,6 @@ aws lambda add-permission \
   --action lambda:InvokeFunction \
   --principal apigateway.amazonaws.com \
   --source-arn "arn:aws:execute-api:${AWS_REGION}:${ACCOUNT_ID}:${REST_API_ID}/*/*/*" >/dev/null || true
-
-# Deploy the API to a stage
-aws apigateway create-deployment \
-  --rest-api-id "$REST_API_ID" \
-  --stage-name "$STAGE_NAME" >/dev/null
 
 # Check if API key already exists
 EXISTING_API_KEY_ID="$(aws apigateway get-api-keys \
@@ -138,21 +117,6 @@ if [ -n "$EXISTING_USAGE_PLAN_IDS" ]; then
   done
 fi
 
-# Create new usage plan
-USAGE_PLAN_ID="$(aws apigateway create-usage-plan \
-  --name "$USAGE_PLAN_NAME" \
-  --api-stages "apiId=$REST_API_ID,stage=$STAGE_NAME" \
-  --throttle burstLimit=100,rateLimit=50 \
-  --quota limit=100000,period=MONTH \
-  --query 'id' --output text)"
-echo "Created new usage plan: $USAGE_PLAN_NAME"
-
-# Attach API key to usage plan (idempotent - won't fail if already attached)
-aws apigateway create-usage-plan-key \
-  --usage-plan-id "$USAGE_PLAN_ID" \
-  --key-type "API_KEY" \
-  --key-id "$API_KEY_ID" >/dev/null 2>&1 || true
-
 # Create a new deployment to apply all changes (with retry for rate limits)
 echo "Deploying API to stage: $STAGE_NAME"
 MAX_RETRIES=5
@@ -169,7 +133,7 @@ while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
     if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
       echo "Deployment rate limited, retrying in ${RETRY_DELAY}s... (attempt $((RETRY_COUNT + 1))/$MAX_RETRIES)"
       sleep $RETRY_DELAY
-      RETRY_DELAY=$((RETRY_DELAY * 2))  # Exponential backoff
+      RETRY_DELAY=$((RETRY_DELAY * 2))
     else
       echo "Failed to deploy after $MAX_RETRIES attempts"
       exit 1
@@ -177,9 +141,61 @@ while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
   fi
 done
 
+# Create new usage plan (must happen after deployment)
+USAGE_PLAN_ID="$(aws apigateway create-usage-plan \
+  --name "$USAGE_PLAN_NAME" \
+  --api-stages "apiId=$REST_API_ID,stage=$STAGE_NAME" \
+  --throttle burstLimit=100,rateLimit=50 \
+  --quota limit=100000,period=MONTH \
+  --query 'id' --output text)"
+echo "Created new usage plan: $USAGE_PLAN_NAME"
+
+# Attach API key to usage plan (idempotent - won't fail if already attached)
+aws apigateway create-usage-plan-key \
+  --usage-plan-id "$USAGE_PLAN_ID" \
+  --key-type "API_KEY" \
+  --key-id "$API_KEY_ID" >/dev/null 2>&1 || true
+
 INVOKE_URL="https://${REST_API_ID}.execute-api.${AWS_REGION}.amazonaws.com/${STAGE_NAME}"
 
+# Wait for API Gateway and Lambda to be fully ready
+echo "Waiting for API Gateway and Lambda to be ready..."
+MAX_HEALTHCHECK_RETRIES=30
+HEALTHCHECK_RETRY_COUNT=0
+HEALTHCHECK_DELAY=2
+
+while [ $HEALTHCHECK_RETRY_COUNT -lt $MAX_HEALTHCHECK_RETRIES ]; do
+  HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -H "x-api-key: $API_KEY_VALUE" "$INVOKE_URL/partners/" 2>/dev/null || echo "000")
+  
+  if [ "$HTTP_CODE" = "200" ]; then
+    echo "✓ API is ready and responding"
+    break
+  elif [ "$HTTP_CODE" = "403" ]; then
+    # 403 means API Gateway is up but Lambda might still be initializing
+    HEALTHCHECK_RETRY_COUNT=$((HEALTHCHECK_RETRY_COUNT + 1))
+    if [ $HEALTHCHECK_RETRY_COUNT -lt $MAX_HEALTHCHECK_RETRIES ]; then
+      echo "API Gateway ready, waiting for Lambda... (attempt $((HEALTHCHECK_RETRY_COUNT + 1))/$MAX_HEALTHCHECK_RETRIES)"
+      sleep $HEALTHCHECK_DELAY
+    fi
+  else
+    HEALTHCHECK_RETRY_COUNT=$((HEALTHCHECK_RETRY_COUNT + 1))
+    if [ $HEALTHCHECK_RETRY_COUNT -lt $MAX_HEALTHCHECK_RETRIES ]; then
+      echo "Waiting for deployment... (HTTP $HTTP_CODE, attempt $((HEALTHCHECK_RETRY_COUNT + 1))/$MAX_HEALTHCHECK_RETRIES)"
+      sleep $HEALTHCHECK_DELAY
+    fi
+  fi
+done
+
+if [ $HEALTHCHECK_RETRY_COUNT -ge $MAX_HEALTHCHECK_RETRIES ]; then
+  echo "⚠ Warning: API did not respond with HTTP 200 after $MAX_HEALTHCHECK_RETRIES attempts"
+  echo "Last HTTP code: $HTTP_CODE"
+fi
+
+echo ""
 echo "REST API ID: $REST_API_ID"
 echo "Stage: $STAGE_NAME"
 echo "Invoke URL: $INVOKE_URL"
 echo "API key (use in x-api-key header): $API_KEY_VALUE"
+echo ""
+echo "Test the API with:"
+echo "curl -H \"x-api-key: $API_KEY_VALUE\" $INVOKE_URL/partners/"
