@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-RUNTIME_IMAGE="public.ecr.aws/lambda/python:3.12"
-LAYER_DIR="build/layer/python"
-ZIP_PATH="build/layer.zip"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/config.sh"
+
+RUNTIME_IMAGE="${RUNTIME_IMAGE:-$RUNTIME_IMAGE_DEFAULT}"
+LAYER_DIR="${LAYER_DIR:-$LAYER_DIR_DEFAULT}"
+ZIP_PATH="${ZIP_PATH:-$LAYER_ZIP_DEFAULT}"
 
 mkdir -p "$LAYER_DIR"
 rm -rf "$LAYER_DIR"/*

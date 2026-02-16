@@ -1,6 +1,6 @@
 """Tests for Partner model."""
 from datetime import datetime
-from src.models.partner import Partner, FIELD_MAP
+from src.db.models.partner import Partner, FIELD_MAP
 
 
 class TestPartnerModel:

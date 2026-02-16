@@ -1,7 +1,7 @@
 import xmlrpc.client
 import logging
 from typing import List, Dict, Any, Optional
-from .config import settings
+from src.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -96,4 +96,3 @@ class OdooClient:
     def get_fields(self, model: str) -> Dict[str, Any]:
         """Get field definitions for a specific model."""
         return self.execute(model, "fields_get", attributes=["type", "string"])
-

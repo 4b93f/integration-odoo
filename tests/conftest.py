@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import MagicMock
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlmodel import SQLModel
-from src.models.partner import Partner
+from src.db.models.partner import Partner
 
 
 @pytest.fixture(scope="session")

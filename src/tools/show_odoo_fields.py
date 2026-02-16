@@ -1,4 +1,4 @@
-from src.odoo_client import OdooClient
+from src.sync.odoo_client import OdooClient
 
 
 def show_partners():
@@ -6,7 +6,6 @@ def show_partners():
     client.connect()
     client.authenticate()
     
-    # Get all partners
     partners = client.get_partners()
     
     print(f"\n📋 Found {len(partners)} partners\n")
@@ -20,7 +19,6 @@ def show_invoices():
     client.connect()
     client.authenticate()
     
-    # Get all invoices
     invoices = client.get_invoices()
     
     print(f"\n📋 Found {len(invoices)} invoices\n")

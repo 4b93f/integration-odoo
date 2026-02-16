@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-RUNTIME_IMAGE="public.ecr.aws/lambda/python:3.12"
-BUILD_DIR="build/lambda_pkg"
-ZIP_PATH="build/lambda.zip"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/config.sh"
+
+RUNTIME_IMAGE="${RUNTIME_IMAGE:-$RUNTIME_IMAGE_DEFAULT}"
+BUILD_DIR="${BUILD_DIR:-$BUILD_DIR_DEFAULT}"
+ZIP_PATH="${ZIP_PATH:-$LAMBDA_ZIP_DEFAULT}"
 
 mkdir -p "$BUILD_DIR"
 rm -rf "$BUILD_DIR"/*

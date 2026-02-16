@@ -1,12 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
+export AWS_PAGER=""
 
-FUNCTION_NAME="${FUNCTION_NAME:-api_handler}"
-ZIP_FILE="${ZIP_FILE:-build/lambda.zip}"
-RUNTIME="python3.12"
-HANDLER="${HANDLER:-src.main.handler}"
-TIMEOUT="${TIMEOUT:-30}"
-MEMORY_SIZE="${MEMORY_SIZE:-512}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/config.sh"
+
+FUNCTION_NAME="${FUNCTION_NAME:-$API_FUNCTION_NAME_DEFAULT}"
+ZIP_FILE="${ZIP_FILE:-$LAMBDA_ZIP_DEFAULT}"
+RUNTIME="${RUNTIME:-$RUNTIME_DEFAULT}"
+HANDLER="${HANDLER:-src.api.app.handler}"
+TIMEOUT="${TIMEOUT:-$TIMEOUT_DEFAULT}"
+MEMORY_SIZE="${MEMORY_SIZE:-$MEMORY_SIZE_DEFAULT}"
 
 ROLE_ARN="${ROLE_ARN:-}"
 ROLE_NAME="${ROLE_NAME:-lambda-execution-role}"
@@ -51,9 +55,21 @@ else
     --function-name "$FUNCTION_NAME" \
     --zip-file "fileb://$ZIP_FILE" >/dev/null
   if [ -n "$ENV_ARGS" ]; then
-    aws lambda update-function-configuration \
-      --function-name "$FUNCTION_NAME" \
-      ${ENV_ARGS} >/dev/null
+    ATTEMPTS=0
+    MAX_ATTEMPTS=5
+    while true; do
+      if aws lambda update-function-configuration \
+        --function-name "$FUNCTION_NAME" \
+        ${ENV_ARGS} >/dev/null; then
+        break
+      fi
+      ATTEMPTS=$((ATTEMPTS + 1))
+      if [ "$ATTEMPTS" -ge "$MAX_ATTEMPTS" ]; then
+        echo "Failed to update configuration for function: $FUNCTION_NAME after $MAX_ATTEMPTS attempts" >&2
+        exit 1
+      fi
+      sleep 5
+    done
   fi
 fi
 

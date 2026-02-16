@@ -1,9 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
+export AWS_PAGER=""
 
-API_NAME="${API_NAME:-chift-api}"
-FUNCTION_NAME="${FUNCTION_NAME:-api_handler}"
-LAYER_NAME="${LAYER_NAME:-chift-deps}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/config.sh"
+
+API_NAME="${API_NAME:-$API_NAME_DEFAULT}"
+FUNCTION_NAME="${FUNCTION_NAME:-$API_FUNCTION_NAME_DEFAULT}"
+LAYER_NAME="${LAYER_NAME:-$LAYER_NAME_DEFAULT}"
 
 echo "Cleaning AWS resources..."
 

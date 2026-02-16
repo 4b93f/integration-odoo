@@ -1,12 +1,12 @@
 """Tests for OdooClient."""
 import pytest
 from unittest.mock import patch, MagicMock
-from src.odoo_client import OdooClient
+from src.sync.odoo_client import OdooClient
 
 
 class TestOdooClient:
     
-    @patch('src.odoo_client.xmlrpc.client.ServerProxy')
+    @patch('src.sync.odoo_client.xmlrpc.client.ServerProxy')
     def test_connect_success(self, mock_proxy):
         mock_common = MagicMock()
         mock_common.version.return_value = {'server_version': '16.0'}
@@ -18,7 +18,7 @@ class TestOdooClient:
         assert client._connected is True
         assert result == {'server_version': '16.0'}
     
-    @patch('src.odoo_client.xmlrpc.client.ServerProxy')
+    @patch('src.sync.odoo_client.xmlrpc.client.ServerProxy')
     def test_authenticate_success(self, mock_proxy=MagicMock()):
         mock_common = MagicMock()
         mock_common.authenticate.return_value = 42
@@ -32,7 +32,7 @@ class TestOdooClient:
         assert uid == 42
         assert client.uid == 42
     
-    @patch('src.odoo_client.xmlrpc.client.ServerProxy')
+    @patch('src.sync.odoo_client.xmlrpc.client.ServerProxy')
     def test_get_partners_with_active_filter(self, 	mock_proxy=MagicMock()):
         mock_models = MagicMock()
         mock_models.execute_kw.return_value = [

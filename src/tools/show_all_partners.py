@@ -1,14 +1,13 @@
 import asyncio
-from sqlalchemy import select, text
-from src.database import engine
-from src.models.partner import Partner
+from sqlalchemy import text
+from src.db.database import engine
 
 
 async def show_all_partners():
     async with engine.begin() as conn:
         result = await conn.execute(text("SELECT * FROM partner"))
         rows = result.fetchall()
-        
+
         if rows:
             print(f"\n📋 All Partners ({len(rows)} total):\n")
             for idx, row in enumerate(rows, 1):

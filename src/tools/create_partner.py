@@ -1,4 +1,4 @@
-from src.odoo_client import OdooClient
+from src.sync.odoo_client import OdooClient
 
 
 def create_partner():
