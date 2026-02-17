@@ -90,7 +90,7 @@ class OdooClient:
 
     def get_invoices(self, domain: Optional[List[Any]] = None, fields: Optional[List[str]] = None) -> List[Dict[str, Any]]:
         """Fetch invoices from Odoo."""
-                
+
         return self.execute("account.move", "search_read", domain, fields=fields)
 
     def get_fields(self, model: str) -> Dict[str, Any]:

@@ -2,63 +2,41 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from datetime import datetime
-from src.sync.sync_partners import sync_partners, upsert_partners
+from src.sync.sync_partners import sync_partners
 
 
 @pytest.mark.asyncio
 class TestPartnerSync:
     
-    @patch('src.sync.sync_partners.OdooClient')
-    @patch('src.sync.sync_partners.upsert_partners')
-    @patch('src.sync.sync_partners.delete_removed_partners') # DO NOT REMOVE THIS, OR DISASTER
-    async def test_sync_partners_maps_fields_correctly(self, mock_delete, mock_upsert, mock_client_class):
-        mock_client = MagicMock()
-        mock_client.get_partners.return_value = [
-            {
-                'id': 1,
-                'name': 'Test Partner',
-                'email': 'test@example.com',
-                'phone': '+123456',
-                'function': 'Developer',
-                'active': True
-            }
-        ]
-        mock_client_class.return_value = mock_client
-        mock_upsert.return_value = None
-        mock_delete.return_value = None
+    @patch('src.sync.sync_partners.PartnerService')
+    async def test_sync_partners_calls_service(self, mock_service_class):
+        # Mock service
+        mock_service = AsyncMock()
+        mock_service.sync_from_odoo = AsyncMock(return_value={
+            'upserted': 1,
+            'deleted': 0,
+            'total_fetched': 1
+        })
+        mock_service_class.return_value = mock_service
+        
         session = MagicMock()
         await sync_partners(session)
         
-        assert mock_upsert.called
-        records = mock_upsert.call_args[0][0]
+        # Verify service was instantiated with session
+        mock_service_class.assert_called_once_with(session)
         
-        assert len(records) == 1
-        assert records[0]['odoo_id'] == 1
-        assert records[0]['name'] == 'Test Partner'
-        assert records[0]['email'] == 'test@example.com'
+        # Verify sync was called
+        mock_service.sync_from_odoo.assert_called_once()
     
-    @patch('src.sync.sync_partners.OdooClient')
-    @patch('src.sync.sync_partners.upsert_partners')
-    @patch('src.sync.sync_partners.delete_removed_partners')
-    async def test_sync_partners_handles_missing_fields(self, mock_delete, mock_upsert, mock_client_class):
-        mock_client = MagicMock()
-        mock_client.get_partners.return_value = [
-            {
-                'id': 2,
-                'name': 'Minimal Partner',
-                'email': None,
-                'phone': None,
-                'function': None,
-                'active': True
-            }
-        ]
-        mock_client_class.return_value = mock_client
-        mock_upsert.return_value = None
-        mock_delete.return_value = None
-        session = MagicMock()
-        await sync_partners(session)
+    @patch('src.sync.sync_partners.PartnerService')
+    async def test_sync_partners_handles_service_error(self, mock_service_class):
+        # Mock service to raise exception
+        mock_service = AsyncMock()
+        mock_service.sync_from_odoo = AsyncMock(side_effect=Exception("Odoo connection failed"))
+        mock_service_class.return_value = mock_service
         
-        records = mock_upsert.call_args[0][0]
-        assert records[0]['email'] is None
-        assert records[0]['phone'] is None
-        assert records[0]['function'] is None
+        session = MagicMock()
+        
+        # Verify exception is raised
+        with pytest.raises(Exception, match="Odoo connection failed"):
+            await sync_partners(session)
