@@ -11,6 +11,8 @@
 
 This project follows **Separation of Concerns (SoC)** with a clean 3-layer architecture:
 
+![Architecture Workflow](./Workflow.png)
+
 ```
 ┌─────────────────────────────────────────────────────────┐
 │  PRESENTATION LAYER                                     │
