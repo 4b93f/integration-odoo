@@ -11,11 +11,7 @@ STAGE_NAME="${STAGE_NAME:-$STAGE_NAME_DEFAULT}"
 API_KEY_NAME="${API_KEY_NAME:-$API_KEY_NAME_DEFAULT}"
 USAGE_PLAN_NAME="${USAGE_PLAN_NAME:-$USAGE_PLAN_NAME_DEFAULT}"
 
-AWS_REGION="${AWS_REGION:-$(aws configure get region || true)}"
-if [ -z "${AWS_REGION:-}" ]; then
-  echo "AWS_REGION is not set and no default region found. Configure AWS CLI or set AWS_REGION." >&2
-  exit 1
-fi
+AWS_REGION="eu-west-1"
 
 ACCOUNT_ID="${ACCOUNT_ID:-$(aws sts get-caller-identity --query 'Account' --output text)}"
 if [ -z "${ACCOUNT_ID:-}" ]; then
