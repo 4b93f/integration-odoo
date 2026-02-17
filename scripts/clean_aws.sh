@@ -11,7 +11,7 @@ LAYER_NAME="${LAYER_NAME:-$LAYER_NAME_DEFAULT}"
 
 echo "Cleaning AWS resources..."
 
-# Delete HTTP APIs named chift-api
+# Delete HTTP APIs named odoo-integration-api
 API_IDS=$(aws apigatewayv2 get-apis --query "Items[?Name=='$API_NAME'].ApiId" --output text || true)
 if [ -n "${API_IDS:-}" ]; then
   for ID in $API_IDS; do

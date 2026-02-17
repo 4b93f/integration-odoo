@@ -215,10 +215,10 @@ Expected response:
 
 ```bash
 # View API Lambda logs
-aws logs tail /aws/lambda/chift-api --follow
+aws logs tail /aws/lambda/odoo-integration-api --follow
 
 # View Sync Lambda logs
-aws logs tail /aws/lambda/chift-sync --follow
+aws logs tail /aws/lambda/odoo-integration-sync --follow
 ```
 
 ### 3. Verify Sync Schedule
@@ -228,7 +228,7 @@ aws logs tail /aws/lambda/chift-sync --follow
 aws scheduler list-schedules
 
 # Get specific schedule details
-aws scheduler get-schedule --name chift-sync-schedule
+aws scheduler get-schedule --name odoo-integration-sync-schedule
 ```
 
 ### 4. Manual Sync Trigger
@@ -236,7 +236,7 @@ aws scheduler get-schedule --name chift-sync-schedule
 ```bash
 # Invoke sync Lambda manually
 aws lambda invoke \\
-  --function-name chift-sync \\
+  --function-name odoo-integration-sync \\
   --log-type Tail \\
   response.json
 
@@ -255,7 +255,7 @@ cat response.json
 **Solutions**:
 1. Check Lambda logs for exceptions:
    ```bash
-   aws logs tail /aws/lambda/chift-api --follow
+   aws logs tail /aws/lambda/odoo-integration-api --follow
    ```
 
 2. Verify database connection:
@@ -265,7 +265,7 @@ cat response.json
 
 3. Check Lambda environment variables:
    ```bash
-   aws lambda get-function-configuration --function-name chift-api
+   aws lambda get-function-configuration --function-name odoo-integration-api
    ```
 
 ### Issue: Sync Not Running
@@ -275,12 +275,12 @@ cat response.json
 **Solutions**:
 1. Check EventBridge schedule is enabled:
    ```bash
-   aws scheduler get-schedule --name chift-sync-schedule
+   aws scheduler get-schedule --name odoo-integration-sync-schedule
    ```
 
 2. Manually trigger sync to see error:
    ```bash
-   aws lambda invoke --function-name chift-sync response.json
+   aws lambda invoke --function-name odoo-integration-sync response.json
    cat response.json
    ```
 
@@ -347,12 +347,12 @@ Edit EventBridge schedule (default: every 15 minutes):
 ```bash
 # Update schedule expression
 aws scheduler update-schedule \\
-  --name chift-sync-schedule \\
+  --name odoo-integration-sync-schedule \\
   --schedule-expression "rate(30 minutes)"  # Change to 30 minutes
 
 # Or use cron expression
 aws scheduler update-schedule \\
-  --name chift-sync-schedule \\
+  --name odoo-integration-sync-schedule \\
   --schedule-expression "cron(0 */2 * * ? *)"  # Every 2 hours
 ```
 
@@ -407,7 +407,7 @@ For database security, run Lambda in VPC:
 ```bash
 # In scripts/deploy_lambda.sh, add VPC configuration:
 aws lambda update-function-configuration \\
-  --function-name chift-api \\
+  --function-name odoo-integration-api \\
   --vpc-config SubnetIds=subnet-xxx,SecurityGroupIds=sg-xxx
 ```
 
@@ -419,20 +419,20 @@ To remove all AWS resources:
 
 ```bash
 # Delete Lambda functions
-aws lambda delete-function --function-name chift-api
-aws lambda delete-function --function-name chift-sync
+aws lambda delete-function --function-name odoo-integration-api
+aws lambda delete-function --function-name odoo-integration-sync
 
 # Delete Lambda layer
-aws lambda delete-layer-version --layer-name chift-python-deps --version-number 1
+aws lambda delete-layer-version --layer-name odoo-integration-deps --version-number 1
 
 # Delete API Gateway
 aws apigateway delete-rest-api --rest-api-id YOUR_API_ID
 
 # Delete EventBridge schedule
-aws scheduler delete-schedule --name chift-sync-schedule
+aws scheduler delete-schedule --name odoo-integration-sync-schedule
 
 # Delete IAM role (if created separately)
-aws iam delete-role --role-name chift-lambda-role
+aws iam delete-role --role-name odoo-integration-lambda-role
 ```
 
 ---
@@ -496,7 +496,7 @@ curl -H "x-api-key: ${API_KEY}" \
 You can override default names without editing the scripts, using environment variables:
 
 ```bash
-API_NAME="my-chift-api" \
+API_NAME="my-odoo-integration-api" \
 SYNC_FUNCTION="my-sync-handler" \
 SYNC_RULE_NAME="my-sync-daily" \
 SYNC_SCHEDULE="rate(12 hours)" \

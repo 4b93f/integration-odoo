@@ -21,7 +21,7 @@ FUNCTION_NAME="$SYNC_FUNCTION" ./scripts/deploy_layer.sh
 
 ./scripts/setup_apigw.sh
 
-SYNC_RULE_NAME=${SYNC_RULE_NAME:-chift-sync-daily}
+SYNC_RULE_NAME=${SYNC_RULE_NAME:-odoo-integration-sync-daily}
 SYNC_SCHEDULE=${SYNC_SCHEDULE:-rate(1 day)}
 RULE_ARN=$(aws events put-rule --name "$SYNC_RULE_NAME" --schedule-expression "$SYNC_SCHEDULE" --query 'RuleArn' --output text)
 FUNC_ARN=$(aws lambda get-function-configuration --function-name "$SYNC_FUNCTION" --query 'FunctionArn' --output text)
