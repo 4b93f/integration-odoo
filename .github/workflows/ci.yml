@@ -92,6 +92,16 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
       
+      - name: Create .env file
+        run: |
+          cat > .env << EOF
+          DATABASE_URL=${{ secrets.DATABASE_URL }}
+          ODOO_URL=${{ secrets.ODOO_URL }}
+          ODOO_DB=${{ secrets.ODOO_DB }}
+          ODOO_USERNAME=${{ secrets.ODOO_USERNAME }}
+          ODOO_PASSWORD=${{ secrets.ODOO_PASSWORD }}
+          EOF
+      
       - name: Deploy to AWS
         run: |
           chmod +x scripts/redeploy_all.sh
