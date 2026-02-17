@@ -48,3 +48,46 @@ jobs:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
           args: --severity-threshold=high
+
+  build:
+    name: Build Lambda Package
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Build Lambda package
+        run: |
+          chmod +x scripts/build_lambda.sh
+          ./scripts/build_lambda.sh
+      
+      - name: Check package size
+        run: |
+          SIZE=$(stat -c%s lambda.zip)
+          SIZE_MB=$((SIZE / 1024 / 1024))
+          echo "Package size: ${SIZE_MB}MB"
+          if [ $SIZE_MB -gt 250 ]; then
+            echo "ERROR: Package exceeds 250MB Lambda limit"
+            exit 1
+          fi
+
+  deploy:
+    name: Deploy to AWS
+    runs-on: ubuntu-latest
+    needs: [test, security, build]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      
+      - name: Deploy to AWS
+        run: |
+          chmod +x scripts/redeploy_all.sh
+          ./scripts/redeploy_all.sh
