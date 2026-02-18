@@ -99,7 +99,7 @@ ODOO_PASSWORD=your-odoo-api-key
 Outputs:
 ```
 API URL: https://xxxxx.execute-api.eu-west-1.amazonaws.com/prod
-API Key: PUb1TzXqB64NfqoO0sYpAabx1maPbmjQ1oArHwop
+API Key: <api-key>
 ```
 
 ### Usage
