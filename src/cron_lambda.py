@@ -14,8 +14,8 @@ async def main():
         expire_on_commit=False,
     )
     async with SessionLocal() as session:
-        await sync_invoices(session)
         await sync_partners(session)
+        await sync_invoices(session)
 
 
 def handler(event, context):
